@@ -1,0 +1,18 @@
+[project]
+name = "sales-assist"
+version = "0.1.0"
+description = "AI-powered sales pitch evaluation system using Agno v2"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "agno>=2.0.0",
+    "huggingface-hub>=0.20.0",
+    "lancedb>=0.18.0",
+    "openai>=1.0.0",
+    "pypdf>=5.1.0",
+    "python-dotenv>=1.0.0",
+    "transformers>=4.40.0",
+    "torch>=2.0.0",
+    "sentence-transformers>=2.7.0",
+    "requests>=2.32.5",
+]

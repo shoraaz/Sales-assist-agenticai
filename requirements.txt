@@ -1,0 +1,21 @@
+# Simple Sales Pitch Evaluator - Requirements
+
+# Core dependencies
+agno>=2.0.0
+python-dotenv
+
+# For embeddings (choose one or use both)
+sentence-transformers  # Lightweight, fast, recommended
+# torch  # Required by sentence-transformers (will auto-install)
+
+# Optional: If you want to use actual MiniCPM
+# transformers
+# accelerate
+
+# Vector database (already included with agno)
+# lancedb
+
+# Development tools (optional)
+# pytest
+# black
+# ruff

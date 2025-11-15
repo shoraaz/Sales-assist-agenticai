@@ -1,0 +1,460 @@
+{
+  "name": "Multi-Agent Sales Pitch Scoring Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -840,
+        300
+      ],
+      "id": "chat-trigger",
+      "name": "When chat message received",
+      "webhookId": "sales-pitch-evaluator"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        500
+      ],
+      "id": "gemini-model-selector",
+      "name": "Gemini - Brochure Selector",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "o4LZRuyCjra7gJ1L",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        200,
+        500
+      ],
+      "id": "gemini-model-analyzer",
+      "name": "Gemini - Knowledge Analyzer",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "o4LZRuyCjra7gJ1L",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        500
+      ],
+      "id": "gemini-model-evaluator",
+      "name": "Gemini - Pitch Evaluator",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "o4LZRuyCjra7gJ1L",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a Product Identification Specialist.\n\nYour ONLY job is to:\n1. Read the sales pitch carefully\n2. Identify which product is being discussed\n3. Search the knowledge base to find the ONE correct brochure\n4. Return ONLY the document name/ID of the matching brochure\n\nOutput Format:\nPRODUCT_IDENTIFIED: [exact document name]\nCONFIDENCE: [high/medium/low]\n\nDo NOT evaluate the pitch. Do NOT provide feedback. Only identify the product.",
+          "maxIterations": 3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -360,
+        300
+      ],
+      "id": "agent-selector",
+      "name": "Agent 1 - Brochure Selector"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "searchBrochures",
+        "toolDescription": "Search for product brochures by product name, features, or keywords",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "sales",
+          "mode": "list",
+          "cachedResultName": "sales"
+        },
+        "topK": 5,
+        "useReranker": true,
+        "options": {
+          "pineconeNamespace": "SCORE"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.1,
+      "position": [
+        -240,
+        500
+      ],
+      "id": "vector-store-selector",
+      "name": "Vector Store - Selector",
+      "credentials": {
+        "pineconeApi": {
+          "id": "JoJblRUngPruxIod",
+          "name": "PineconeApi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "google/embeddinggemma-300m",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        700
+      ],
+      "id": "embeddings-1",
+      "name": "Embeddings HuggingFace",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "80kWQsTWMzM8wfFb",
+          "name": "HuggingFaceApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "topN": 3
+      },
+      "type": "@n8n/n8n-nodes-langchain.rerankerCohere",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        580
+      ],
+      "id": "reranker-1",
+      "name": "Reranker Cohere",
+      "credentials": {
+        "cohereApi": {
+          "id": "RDaMLsHHougX4o00",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract the identified brochure name from Agent 1\nconst agent1Response = $input.item.json.output;\nconst brochureMatch = agent1Response.match(/PRODUCT_IDENTIFIED:\\s*(.+)/i);\nconst brochureName = brochureMatch ? brochureMatch[1].trim() : '';\n\n// Store in workflow context\nreturn {\n  json: {\n    salesPitch: $input.item.json.chatInput,\n    identifiedBrochure: brochureName,\n    agent1Response: agent1Response\n  }\n};"
+      },
+      "type": "@n8n/n8n-nodes-langchain.code",
+      "typeVersion": 1.2,
+      "position": [
+        -60,
+        300
+      ],
+      "id": "code-extract-brochure",
+      "name": "Extract Brochure ID"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a Product Knowledge Analyzer.\n\nYou will receive:\n1. The identified brochure name: {{ $json.identifiedBrochure }}\n2. The sales pitch\n\nYour job:\n1. Search the knowledge base for the EXACT brochure identified\n2. Extract COMPLETE information from that ONE brochure only:\n   - All product features\n   - All benefits\n   - Eligibility criteria\n   - Terms and conditions\n   - Pricing details\n   - Exclusions and limitations\n   - Compliance requirements\n   - Any disclaimers\n\n3. Create a comprehensive summary that covers EVERYTHING in the brochure\n\nIMPORTANT: Only use information from the document: {{ $json.identifiedBrochure }}\nDo NOT use any other documents.\nDo NOT make assumptions.\n\nOutput Format:\nDOCUMENT_USED: [confirm document name]\nKEY_FEATURES: [list all]\nBENEFITS: [list all]\nELIGIBILITY: [list all]\nTERMS_CONDITIONS: [list all]\nCOMPLIANCE_REQUIREMENTS: [list all]\nEXCLUSIONS: [list all]",
+          "maxIterations": 5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        440,
+        300
+      ],
+      "id": "agent-analyzer",
+      "name": "Agent 2 - Knowledge Analyzer"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "getBrochureDetails",
+        "toolDescription": "Get detailed information from the specific identified brochure: {{ $json.identifiedBrochure }}",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "sales",
+          "mode": "list",
+          "cachedResultName": "sales"
+        },
+        "topK": 50,
+        "useReranker": true,
+        "options": {
+          "pineconeNamespace": "SCORE",
+          "pineconeMetadataFilter": {
+            "filename": "={{ $json.identifiedBrochure }}"
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        500
+      ],
+      "id": "vector-store-analyzer",
+      "name": "Vector Store - Analyzer (Filtered)",
+      "credentials": {
+        "pineconeApi": {
+          "id": "JoJblRUngPruxIod",
+          "name": "PineconeApi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "google/embeddinggemma-300m",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        680,
+        700
+      ],
+      "id": "embeddings-2",
+      "name": "Embeddings HuggingFace2",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "80kWQsTWMzM8wfFb",
+          "name": "HuggingFaceApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "topN": 30
+      },
+      "type": "@n8n/n8n-nodes-langchain.rerankerCohere",
+      "typeVersion": 1,
+      "position": [
+        720,
+        580
+      ],
+      "id": "reranker-2",
+      "name": "Reranker Cohere2",
+      "credentials": {
+        "cohereApi": {
+          "id": "RDaMLsHHougX4o00",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all context for final evaluation\nconst salesPitch = $input.item.json.salesPitch;\nconst identifiedBrochure = $input.item.json.identifiedBrochure;\nconst agent2Response = $input.item.json.output;\n\nreturn {\n  json: {\n    salesPitch: salesPitch,\n    identifiedBrochure: identifiedBrochure,\n    brochureKnowledge: agent2Response\n  }\n};"
+      },
+      "type": "@n8n/n8n-nodes-langchain.code",
+      "typeVersion": 1.2,
+      "position": [
+        740,
+        300
+      ],
+      "id": "code-combine-context",
+      "name": "Combine Context"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an expert Sales Pitch Evaluator.\n\nYou will receive:\n1. The sales pitch\n2. The identified brochure: {{ $json.identifiedBrochure }}\n3. Complete knowledge from that brochure\n\nYour job is to evaluate the pitch ONLY against the provided brochure knowledge.\n\nEvaluation Criteria (Score 0-100):\n- Accuracy (30 points): Are all facts correct per the brochure?\n- Completeness (25 points): Are all key features mentioned?\n- Clarity (15 points): Is the pitch easy to understand?\n- Persuasiveness (15 points): Is it compelling?\n- Compliance (15 points): Are required disclosures included?\n\nOutput Format:\n\nSCORE: [0-100]\n\nBREAKDOWN:\n- Accuracy: [score/30] - [explanation]\n- Completeness: [score/25] - [explanation]\n- Clarity: [score/15] - [explanation]\n- Persuasiveness: [score/15] - [explanation]\n- Compliance: [score/15] - [explanation]\n\nSTRENGTHS:\n[Bullet list with specific examples from the pitch that match the brochure]\n\nWEAK POINTS:\n[Bullet list of inaccuracies, omissions, or unclear statements]\n- Each point must reference what was wrong vs. what the brochure says\n\nRECOMMENDATIONS:\n[Specific, actionable suggestions to improve]\n\nSOURCE DOCUMENT:\n{{ $json.identifiedBrochure }}\n\nIMPORTANT RULES:\n- Only evaluate against the provided brochure knowledge\n- Flag ANY claim not found in the brochure as inaccurate\n- Be specific and cite examples from both pitch and brochure\n- Be constructive and encouraging in tone",
+          "maxIterations": 5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        1240,
+        300
+      ],
+      "id": "agent-evaluator",
+      "name": "Agent 3 - Pitch Evaluator & Feedback"
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Agent 1 - Brochure Selector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Brochure Selector": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 1 - Brochure Selector",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 1 - Brochure Selector": {
+      "main": [
+        [
+          {
+            "node": "Extract Brochure ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store - Selector": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent 1 - Brochure Selector",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Vector Store - Selector",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Vector Store - Analyzer (Filtered)",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reranker Cohere": {
+      "ai_reranker": [
+        [
+          {
+            "node": "Vector Store - Selector",
+            "type": "ai_reranker",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Brochure ID": {
+      "main": [
+        [
+          {
+            "node": "Agent 2 - Knowledge Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Knowledge Analyzer": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 2 - Knowledge Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 2 - Knowledge Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Combine Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store - Analyzer (Filtered)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent 2 - Knowledge Analyzer",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reranker Cohere2": {
+      "ai_reranker": [
+        [
+          {
+            "node": "Vector Store - Analyzer (Filtered)",
+            "type": "ai_reranker",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Context": {
+      "main": [
+        [
+          {
+            "node": "Agent 3 - Pitch Evaluator & Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Pitch Evaluator": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 3 - Pitch Evaluator & Feedback",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f64ece9999f7e59462739b49b90c7158f8e07f9b486e20f188f7c858e9aefb71"
+  },
+  "tags": [
+    {
+      "id": "h0nGHG93Bxv4oD7u",
+      "name": "SalesAssist"
+    }
+  ]
+}

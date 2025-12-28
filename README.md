@@ -697,43 +697,9 @@ furnished to do so, subject to the following conditions:
 - 📘 [OpenRouter Docs](https://openrouter.ai/docs)
 - 📙 [LanceDB Guide](https://lancedb.github.io/lancedb/)
 
-### Issues
-Found a bug? [Open an issue](https://github.com/yourusername/sales-assist/issues)
 
-### Contact
-- 📧 Email: support@sales-assist.com
-- 💬 Discord: [Join our community](https://discord.gg/sales-assist)
-- 🐦 Twitter: [@SalesAssistAI](https://twitter.com/salesassistai)
 
----
-
-## 🗺️ Roadmap
-
-### Version 0.2.0 (Q1 2024)
-- [ ] Web UI dashboard
-- [ ] Batch evaluation mode
-- [ ] Export reports (PDF/Excel)
-- [ ] Voice input support
-
-### Version 0.3.0 (Q2 2024)
-- [ ] Multi-language support
-- [ ] Custom training data
-- [ ] Integration with CRM systems
-- [ ] Real-time collaboration
-
-### Version 1.0.0 (Q3 2024)
-- [ ] Production deployment tools
-- [ ] Advanced analytics dashboard
-- [ ] A/B testing framework
-- [ ] Enterprise features
-
----
-
-<div align="center">
-
-### ⭐ Star us on GitHub if you find this useful!
-
-Made with ❤️ by the Sales-Assist Team
+Made with ❤️ by Shourya
 
 [⬆ Back to Top](#-sales-assist-ai-powered-sales-pitch-evaluator)
 
